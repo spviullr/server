@@ -25,9 +25,23 @@ public class Film {
     private String name;
     private String kategorie;
     private String laenge;
+
+    public Film(String name, String kategorie, String laenge, String erscheinungsdatum, String regisseur, String drehbuchautor, String cast, String filmbanner) {
+        this.name = name;
+        this.kategorie = kategorie;
+        this.laenge = laenge;
+        this.erscheinungsdatum = erscheinungsdatum;
+        this.regisseur = regisseur;
+        this.drehbuchautor = drehbuchautor;
+        this.cast = cast;
+        this.filmbanner = filmbanner;
+    }
+
     private String erscheinungsdatum;
     private String regisseur;
     private String drehbuchautor;
     private String cast;
     private String filmbanner;
+
+
 }
