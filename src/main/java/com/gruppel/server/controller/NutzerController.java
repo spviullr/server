@@ -1,6 +1,7 @@
 package com.gruppel.server.controller;
 
 import com.gruppel.server.entity.Nutzer;
+import com.gruppel.server.entity.ValidateNutzer;
 import com.gruppel.server.service.NutzerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,16 @@ public class NutzerController {
         if(neuerNutzer == null) return new ResponseEntity<>(HttpStatus.CONFLICT);
 
         return new ResponseEntity<>(neuerNutzer, HttpStatus.OK);
+    }
+
+    @PostMapping("/validateNutzer")
+    public ResponseEntity validateNutzer(@RequestBody ValidateNutzer validateNutzer){
+        Nutzer nutzer = service.validateNutzer(validateNutzer.getEmail(), validateNutzer.getPasswort());
+
+        // passwort falsch oder email nicht gefunden
+        if(nutzer == null) return new ResponseEntity<>(HttpStatus.CONFLICT);
+
+        return new ResponseEntity<>(nutzer, HttpStatus.OK);
     }
 
     

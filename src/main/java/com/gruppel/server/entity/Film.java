@@ -18,7 +18,6 @@ import java.util.List;
 @Entity
 @Table(name = "filme")
 public class Film {
-//{7WX>ZsBu7{}{JW)
     @Id
     @GeneratedValue
     private int id;

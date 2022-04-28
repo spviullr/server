@@ -21,6 +21,18 @@ public class NutzerService {
         return repository.save(nutzer);
     }
 
+    public Nutzer validateNutzer(String email, String password){
+        Nutzer nutzer = repository.findByEmail(email);
+
+        if(nutzer == null) return null;
+
+        if(!comparePassword(password, nutzer)){
+            return null;
+        }
+
+        return nutzer;
+    }
+
 
     public boolean comparePassword(String password, Nutzer nutzer){
         return BCrypt.checkpw(password, nutzer.getPasswort());
