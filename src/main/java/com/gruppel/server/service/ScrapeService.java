@@ -4,7 +4,6 @@ import com.gruppel.server.entity.Film;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,7 +15,6 @@ import java.util.logging.SimpleFormatter;
 
 @Service
 public class ScrapeService {
-
     public List<Film> scrapeIMDB(String yearMin, String yearMax, String genre, int maxAmount) {
         List<Film> filmList = new ArrayList<>();
 
@@ -45,43 +43,71 @@ public class ScrapeService {
             while (anzahlFilme < maxAmount) {
 
                 for (Element row : document.select("div.mode-advanced.lister-item")) {
+
+                    //System.out.println(writers.body().getElementById("fullcredits_content").toString().split("Writing Credits")[1]);
+
                     final String title = row.select(".lister-item-header a").text();
                     final String category = row.select(".genre").text();
-                    //TODO: klären, ob Kategorien gesplittet werden müssen oder nicht
                     final String length = row.select(".runtime").text();
                     final String date = row.select(".unbold.text-muted.lister-item-year").text();
-                    String people = row.select("p a").text();
-                    String[] names = people.split(" ");
-                    final String regie = names[0] + " " + names[1];
-                    final String writer = "";
-                    //TODO: Writer nicht in IMDB Liste enthalten, workaround planen
-                    final Elements banner = row.select("img[src$= .png]");
-                    String cast = "";
-                    int z = 2;
-                    while (z < names.length) {
-                        //TODO: Problem mit Doppelnamen: Bsp. "Milly Bobby Brown", werden falsch getrennt
-                        cast = cast + " " + names[z];
-                        z++;
-                        if (z % 2 == 0) {
-                            cast = cast + ",";
+
+                    final String banner = row.select("[src$= .png]").toString().split("loadlate=\"")[1].split("\"")[0];
+
+                    String cast;
+                    String regie;
+
+                    String drehbuch = row.select("p a:nth-child(7)").text();
+                    if (drehbuch.equals("")) {
+                        regie = row.select("p a:nth-child(1)").text();
+                        cast = row.select("p a:nth-child(3)").text()
+                                + ", " + row.select("p a:nth-child(4)").text()
+                                + ", " + row.select("p a:nth-child(5)").text()
+                                + ", " + row.select("p a:nth-child(6)").text();
+                    } else {
+                        regie = row.select("p a:nth-child(1)").text() + " " + row.select("p a:nth-child(2)").text();
+                        cast = row.select("p a:nth-child(4)").text()
+                                + ", " + row.select("p a:nth-child(5)").text()
+                                + ", " + row.select("p a:nth-child(6)").text()
+                                + ", " + row.select("p a:nth-child(7)").text();
+                    }
+
+                    String writers = "";
+                    String titleRef = row.select(".lister-item-header a[href]").attr("href").split("/title/")[1].split("/")[0];
+                    String writerUrl = "https://www.imdb.com/title/" + titleRef + "/fullcredits";
+                    Document fullcredits = Jsoup.connect(writerUrl).get();
+
+                    String[] tableLines = fullcredits.body().getElementById("fullcredits_content").toString().split("Writing Credits")[1]
+                            .split("</table>")[0].split("<td class=\"name\">");
+
+                    int lineCount = 0;
+                    for (String line : tableLines) {
+                        if (line.contains("<a href=\"/name/")) {
+                            lineCount++;
+                            writers += line.split("<a href=\"/name/")[1].split("\">")[1].split("</a>")[0].trim();
+
+                            //nach jedem autor komma setzen außer dem letzten
+                            if (lineCount != tableLines.length) {
+                                writers += ", ";
+                            }
                         }
                     }
+
                     log.info("\n    Titel: " + title +
                             "\n     Regie: " + regie +
                             "\n     Genre: " + category +
                             "\n     Länge: " + length +
                             "\n     Erscheinungsjahr: " + date +
                             "\n     Cast: " + cast +
-                            "\n     Banner: " + banner.attr("src"));
+                            "\n     Drehbuchautoren: " + writers +
+                            "\n     Banner: " + banner);
 
                     //DONE: erstelleFilm() mit den gegebenen Parametern ausführen
-                    filmList.add(new Film(title, category, length, date, regie, writer, cast, banner.attr("src")));
-
-                    System.out.println("\n link: " + banner.attr("src"));
+                    Film newFilm = new Film(title, category, length, date, regie, writers, cast, banner);
+                    filmList.add(newFilm);
 
                     anzahlFilme++;
 
-                    if(anzahlFilme >= maxAmount){
+                    if (anzahlFilme >= maxAmount) {
                         break;
                     }
 
@@ -100,18 +126,19 @@ public class ScrapeService {
     }
 
     private String setUrl(String yearMin, String yearMax, String genre, int siteUpdater, int anzahlFilme) {
-        String url = "";
-
-        if (anzahlFilme != 0) {
-            url = "&start=" + siteUpdater;
-        }
-
+        String url;
         if (yearMin == null || yearMax == null) {
-            return "https://www.imdb.com/search/title/?title_type=feature&count=250" + (genre != null ? "&genres=" + genre : "") + url;
+            url = "https://www.imdb.com/search/title/?title_type=feature" + (genre != null ? "&genres=" + genre : "") + "&count=250";
+        } else {
+            url = "https://www.imdb.com/search/title/?title_type=feature&release_date=" + yearMin + "-01-01," + yearMax + "-01-01" + (genre != null ? "&genres=" + genre : "") + "&count=250";
         }
-
-        return "https://www.imdb.com/search/title/?title_type=feature&release_date=" + yearMin + "-01-01," + yearMax
-                + "-01-01&count=250" + (genre != null ? "&genres=" + genre : "") + url;
+        if (anzahlFilme == 0) {
+            return url;
+        } else {
+            url = url + "&start=" + siteUpdater;
+        }
+        return url;
     }
+
 
 }
