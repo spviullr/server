@@ -22,7 +22,6 @@ public class ScrapeService {
             int anzahlFilme = 0, siteUpdater = 251;
 
             String url = setUrl(yearMin, yearMax, genre, siteUpdater, anzahlFilme);
-
             Document document = Jsoup.connect(url).get();
             Logger log = Logger.getLogger("FilmListe");
 
@@ -43,8 +42,6 @@ public class ScrapeService {
             while (anzahlFilme < maxAmount) {
 
                 for (Element row : document.select("div.mode-advanced.lister-item")) {
-
-                    //System.out.println(writers.body().getElementById("fullcredits_content").toString().split("Writing Credits")[1]);
 
                     final String title = row.select(".lister-item-header a").text();
                     final String category = row.select(".genre").text();
@@ -76,20 +73,23 @@ public class ScrapeService {
                     String writerUrl = "https://www.imdb.com/title/" + titleRef + "/fullcredits";
                     Document fullcredits = Jsoup.connect(writerUrl).get();
 
-                    String[] tableLines = fullcredits.body().getElementById("fullcredits_content").toString().split("Writing Credits")[1]
-                            .split("</table>")[0].split("<td class=\"name\">");
+                    if(fullcredits.body().getElementById("fullcredits_content").toString().contains("Writing Credits")){
+                        String[] tableLines = fullcredits.body().getElementById("fullcredits_content").toString().split("Writing Credits")[1]
+                                .split("</table>")[0].split("<td class=\"name\">");
+                        int lineCount = 0;
+                        for (String line : tableLines) {
+                            if (line.contains("<a href=\"/name/")) {
+                                lineCount++;
+                                writers += line.split("<a href=\"/name/")[1].split("\">")[1].split("</a>")[0].trim();
 
-                    int lineCount = 0;
-                    for (String line : tableLines) {
-                        if (line.contains("<a href=\"/name/")) {
-                            lineCount++;
-                            writers += line.split("<a href=\"/name/")[1].split("\">")[1].split("</a>")[0].trim();
-
-                            //nach jedem autor komma setzen außer dem letzten
-                            if (lineCount != tableLines.length) {
-                                writers += ", ";
+                                //nach jedem autor komma setzen außer dem letzten
+                                if (lineCount != tableLines.length) {
+                                    writers += ", ";
+                                }
                             }
                         }
+                    }else{
+                        System.out.println("Drehbuchautor für " + title + " nicht verfügbar!");
                     }
 
                     log.info("\n    Titel: " + title +
@@ -101,9 +101,9 @@ public class ScrapeService {
                             "\n     Drehbuchautoren: " + writers +
                             "\n     Banner: " + banner);
 
-                    //DONE: erstelleFilm() mit den gegebenen Parametern ausführen
                     Film newFilm = new Film(title, category, length, date, regie, writers, cast, banner);
                     filmList.add(newFilm);
+                    //System.out.println(newFilm.toString());
 
                     anzahlFilme++;
 
